@@ -121,9 +121,19 @@ class Ghost:
     #        self.position = path_to_pacman[1]
     #    return self.position
 
-    def move(self, grid, pacman_pos):
+    def move(self, grid, pacman_pos, previous_move):
         rows, cols = len(grid), len(grid[0])
         move_list = []
+        print(previous_move)
+        if previous_move != (0, 0):
+            dx = previous_move[0]
+            dy = previous_move[1]
+            next_pos = (self.position[0] + dx, self.position[1] + dy)
+            if (0 <= next_pos[0] < rows and 
+                0 <= next_pos[1] < cols and 
+                grid[next_pos[0]][next_pos[1]] != 1):
+                self.position = next_pos
+                return (next_pos, previous_move)
 
         for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
             next_pos = (self.position[0] + dx, self.position[1] + dy)
@@ -134,6 +144,10 @@ class Ghost:
                 continue
             elif grid[next_pos[0]][next_pos[1]] == 1:
                 continue
+            
+            if (dx, dy) == previous_move:
+                self.position = next_pos
+                return (next_pos, previous_move)
 
             #if next_pos == pacman_pos:
             #    self.position = next_pos
@@ -141,8 +155,11 @@ class Ghost:
             
             move_list.append(next_pos)
 
-        self.position = random.choice(move_list)
-        return self.position
+        new_position = random.choice(move_list)
+        previous_move = (new_position[0] - self.position[0], new_position[1] - self.position[1])
+        print(previous_move)
+        self.position = new_position
+        return (self.position, previous_move)
 
 def draw_grid():
     for y, row in enumerate(grid):
@@ -177,6 +194,7 @@ def pacman_move(grid, current_pos, dots, ghost_pos):
 def main():
     ghost_pos = (6, 7)
     ghost = Ghost(ghost_pos, RED)
+    previous_move = (0, 0)
     #cleared = True
 
     current_pos = (0, 0)
@@ -199,7 +217,10 @@ def main():
                 running = False
 
         new_pos = pacman_move(grid, current_pos, dots, ghost_pos)
-        ghost_pos = ghost.move(grid, current_pos)
+        move_result = ghost.move(grid, current_pos, previous_move)
+        ghost_pos = move_result[0]
+        previous_move = move_result[1]
+
         if new_pos:
             current_pos = new_pos
             if new_pos in dots:
@@ -213,8 +234,11 @@ def main():
             pygame.display.flip()
             break
 
-        
-        
+
+        screen.fill(BLACK)
+        draw_grid()
+        draw_pacman(current_pos)
+        ghost.draw()
         pygame.display.flip()
 
 
