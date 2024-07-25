@@ -1,186 +1,190 @@
 import pygame
 import numpy as np
 import random
-from tqdm import tqdm
 
-# Initialize Pygame
 pygame.init()
 
-
 grid = [
-    [0, 0, 0, 0, 2, 2, 2, 2, 2, 1],
-    [2, 1, 1, 1, 2, 0, 1, 1, 1, 1],
-    [2, 2, 2, 1, 2, 1, 0, 0, 0, 1],
-    [1, 1, 2, 2, 2, 0, 0, 0, 0, 1],
-    [0, 0, 0, 0, 2, 2, 2, 2, 2, 1],
-    [2, 2, 2, 2, 2, 0, 0, 0, 2, 1],
-    [2, 0, 0, 0, 0, 2, 2, 2, 2, 1],
-    [1, 1, 1, 1, 1, 2, 1, 1, 1, 1],
-    [2, 2, 2, 2, 2, 2, 2, 1, 1, 1],
-    [1, 1, 1, 1, 1, 1, 2, 2, 2, 1]
+    [0, 0, 0, 0, 2, 2, 2, 2, 2],
+    [2, 1, 1, 1, 2, 0, 1, 1, 1],
+    [2, 2, 2, 1, 2, 1, 0, 0, 0],
+    [1, 1, 2, 2, 2, 0, 0, 0, 0],
+    [0, 0, 0, 0, 2, 2, 2, 2, 2],
+    [2, 2, 2, 2, 2, 0, 0, 0, 2],
+    [2, 0, 0, 0, 0, 2, 2, 2, 2],
+    [1, 1, 1, 1, 1, 2, 1, 1, 1],
+    [2, 2, 2, 2, 2, 2, 2, 1, 1],
+    [1, 1, 1, 1, 1, 1, 2, 2, 2]
 ]
 
-# Colors
+dots = [(0, 4), (0, 5), (0, 6), (0, 7), (0, 8), (1, 0), (1, 4), (2, 0), (2, 1), 
+(2, 2), (2, 4), (3, 2), (3, 3), (3, 4), (4, 4), (4, 5), (4, 6), (4, 7), (4, 8), 
+(5, 0), (5, 1), (5, 2), (5, 3), (5, 4), (5, 8), (6, 0), (6, 5), (6, 6), (6, 7), 
+(6, 8), (7, 5), (8, 0), (8, 1), (8, 2), (8, 3), (8, 4), (8, 5), (8, 6), (9, 6), 
+(9, 7), (9, 8)]
+
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 BLUE = (0, 0, 255)
 YELLOW = (255, 255, 0)
-RED = (255, 0, 0)
 
-# Grid size
-GRID_SIZE = len(grid)
-CELL_SIZE = 30
-WIDTH = GRID_SIZE * CELL_SIZE
-HEIGHT = GRID_SIZE * CELL_SIZE
-
-# Set up the display
+CELL_SIZE = 40
+WIDTH = len(grid[0]) * CELL_SIZE
+HEIGHT = len(grid) * CELL_SIZE
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Pac-Man Q-Learning")
+pygame.display.set_caption("Pac-Man Pathfinding")
 
-
-# Q-table
-Q = np.zeros((GRID_SIZE, GRID_SIZE, 4))  # 4 actions: 0:up, 1:right, 2:down, 3:left
-
-# Hyperparameters
-EPISODES = 1000
-EPSILON = 0.1
-ALPHA = 0.1
-GAMMA = 0.9
-
-# Rewards
-DOT_REWARD = 10
-GHOST_PENALTY = -100
-MOVE_PENALTY = -1
-
-def reset_game():
-    global pacman_pos, ghost_pos, grid
-    pacman_pos = [1, 1]
-    ghost_pos = [GRID_SIZE-1, GRID_SIZE-2]
-    grid = [
-    [0, 0, 0, 0, 2, 2, 2, 2, 2, 1],
-    [2, 1, 1, 1, 2, 0, 1, 1, 1, 1],
-    [2, 2, 2, 1, 2, 1, 0, 0, 0, 1],
-    [1, 1, 2, 2, 2, 0, 0, 0, 0, 1],
-    [0, 0, 0, 0, 2, 2, 2, 2, 2, 1],
-    [2, 2, 2, 2, 2, 0, 0, 0, 2, 1],
-    [2, 0, 0, 0, 0, 2, 2, 2, 2, 1],
-    [1, 1, 1, 1, 1, 2, 1, 1, 1, 1],
-    [2, 2, 2, 2, 2, 2, 2, 1, 1, 1],
-    [1, 1, 1, 1, 1, 1, 2, 2, 2, 1]
-    ]
-    
-    # Place dots
-
-def move_ghost():
-    directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
-    dx, dy = random.choice(directions)
-    new_x, new_y = ghost_pos[0] + dx, ghost_pos[1] + dy
-    if 0 < new_x < GRID_SIZE-1 and 0 < new_y < GRID_SIZE-1 and grid[new_x][new_y] != 1:
-        ghost_pos[0], ghost_pos[1] = new_x, new_y
-
-def draw_grid():
-    for i in range(GRID_SIZE):
-        for j in range(GRID_SIZE):
-            rect = pygame.Rect(j*CELL_SIZE, i*CELL_SIZE, CELL_SIZE, CELL_SIZE)
-            if grid[i][j] == 1:
+def draw_grid(grid):
+    for y, row in enumerate(grid):
+        for x, cell in enumerate(row):
+            rect = pygame.Rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+            if cell == 1:
                 pygame.draw.rect(screen, BLUE, rect)
-            elif grid[i][j] == 2:
-                pygame.draw.circle(screen, WHITE, rect.center, CELL_SIZE//4)
+            elif cell == 2:
+                pygame.draw.circle(screen, WHITE, rect.center, CELL_SIZE//8)
 
-def draw_pacman():
-    rect = pygame.Rect(pacman_pos[1]*CELL_SIZE, pacman_pos[0]*CELL_SIZE, CELL_SIZE, CELL_SIZE)
-    pygame.draw.circle(screen, YELLOW, rect.center, CELL_SIZE//2)
+def draw_pacman(pos):
+    center = (pos[1] * CELL_SIZE + CELL_SIZE//2, pos[0] * CELL_SIZE + CELL_SIZE//2)
+    pygame.draw.circle(screen, YELLOW, center, CELL_SIZE // 2)
 
-def draw_ghost():
-    rect = pygame.Rect(ghost_pos[1]*CELL_SIZE, ghost_pos[0]*CELL_SIZE, CELL_SIZE, CELL_SIZE)
-    pygame.draw.circle(screen, RED, rect.center, CELL_SIZE//2)
+# Q-learning parameters
+LEARNING_RATE = 0.1
+DISCOUNT_FACTOR = 0.95
+EPSILON = 1.0
+EPSILON_DECAY = 0.9995
+EPSILON_MIN = 0.01
+EPISODES = 1000  # Number of training episodes
 
-def get_state():
-    return tuple(pacman_pos)
+# Initialize Q-table
+state_space = len(grid) * len(grid[0])
+action_space = 4  # Up, Down, Left, Right
+q_table = np.zeros((state_space, action_space))
 
-def choose_action(state):
-    if random.random() < EPSILON:
+def get_state(pos):
+    return pos[0] * len(grid[0]) + pos[1]
+
+def get_action(state, epsilon):
+    if random.uniform(0, 1) < epsilon:
         return random.randint(0, 3)
-    return np.argmax(Q[state])
+    else:
+        return np.argmax(q_table[state])
 
-def take_action(action):
-    global pacman_pos
-    directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
-    dx, dy = directions[action]
-    new_x, new_y = pacman_pos[0] + dx, pacman_pos[1] + dy
+def get_next_position(current_pos, action):
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # Up, Down, Left, Right
+
+
+    next_pos = (current_pos[0] + directions[action][0], current_pos[1] + directions[action][1])
     
-    if 0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE and grid[new_x][new_y] != 1:
-        pacman_pos = [new_x, new_y]
-        
-        if grid[new_x][new_y] == 2:  # Dot
-            grid[new_x][new_y] = 0
-            return DOT_REWARD
-        elif grid[new_x][new_y] == ghost_pos:
-            return GHOST_PENALTY
-        else:
-            return MOVE_PENALTY
-    return MOVE_PENALTY
+    if (0 <= next_pos[0] < len(grid) and 0 <= next_pos[1] < len(grid[0]) and
+        grid[next_pos[0]][next_pos[1]] != 1):
+        return next_pos
+    else:
+        return current_pos
 
 def update_q_table(state, action, reward, next_state):
-    best_next_action = np.argmax(Q[next_state])
-    td_target = reward + GAMMA * Q[next_state + (best_next_action,)]
-    td_error = td_target - Q[state + (action,)]
-    Q[state + (action,)] += ALPHA * td_error
+    current_q = q_table[state][action]
+    max_future_q = np.max(q_table[next_state])
+    new_q = (1 - LEARNING_RATE) * current_q + LEARNING_RATE * (reward + DISCOUNT_FACTOR * max_future_q)
+    q_table[state][action] = new_q
 
-# Training phase (without display)
-print("Training Pac-Man...")
-for episode in tqdm(range(EPISODES)):
-    reset_game()
-    state = get_state()
-    total_reward = 0
-    
-    while True:
-        action = choose_action(state)
-        reward = take_action(action)
-        next_state = get_state()
-        update_q_table(state, action, reward, next_state)
-        
-        total_reward += reward
-        state = next_state
-        
-        move_ghost()
-        
-        if reward == GHOST_PENALTY or not np.any(grid == 2):
-            break
+def train():
+    global q_table
+    epsilon = 0.9
+    discount_factor = 0.9
+    learning_rate = 0.9
 
-print("Training complete!")
+    for episode in range(EPISODES):
+        current_pos = (0, 0)
+        dots_copy = dots.copy()
+        grid_copy = [row[:] for row in grid]
+        score = 0
+        pellets_collected = 0
+        
+        while pellets_collected < len(dots):
+            state = get_state(current_pos)
+            action = get_action(state, epsilon)
+            new_pos = get_next_position(current_pos, action)
 
-# Gameplay demonstration
-def play_game():
-    reset_game()
+            if new_pos in dots_copy:
+                reward = 200  # Reward for collecting a pellet
+                dots_copy.remove(new_pos)
+                grid_copy[new_pos[0]][new_pos[1]] = 0
+                pellets_collected += 1
+            else:
+                reward = -3000  # Time penalty
+
+            old_q = q_table[state, action]
+            temporal_diff = reward + (discount_factor * np.max(q_table[state]) - old_q)
+
+            
+
+            new_q = (temporal_diff * learning_rate) + old_q
+            q_table[state][action] = new_q
+            
+            #next_state = get_state(new_pos)
+            #update_q_table(state, action, reward, next_state)
+
+            current_pos = new_pos
+            score += reward
+
+        #epsilon = max(epsilon * epsilon_decay, epsilon_min)
+
+        if episode % 100 == 0:
+            print(f"Episode {episode}, Score: {score}, Epsilon: {epsilon:.4f}")
+
+    print("Training complete.")
+
+def display_score(screen, score, pellets_collected, total_pellets):
+    font = pygame.font.Font(None, 36)
+    score_text = font.render(f"Score: {score}", True, WHITE)
+    pellets_text = font.render(f"Pellets: {pellets_collected}/{total_pellets}", True, WHITE)
+    screen.blit(score_text, (10, 10))
+    screen.blit(pellets_text, (10, 50))
+
+def main():
+    print("Training Pac-Man...")
+    train()
+    print("Training complete. Starting game...")
+
+    current_pos = (0, 0)
     clock = pygame.time.Clock()
-    
-    while True:
+    score = 0
+    pellets_collected = 0
+    total_pellets = len(dots)
+    dots_copy = dots.copy()
+    grid_copy = [row[:] for row in grid]
+
+    running = True
+    while pellets_collected < len(dots) and running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return
-        
-        state = get_state()
-        action = np.argmax(Q[state])  # Always choose the best action
-        reward = take_action(action)
-        
-        move_ghost()
-        
-        # Draw everything
+                running = False
+        state = get_state(current_pos)
+        action = get_action(state, 1)
+        new_pos = get_next_position(current_pos, action)
+
+        if new_pos in dots_copy:
+            reward = 200  # Reward for collecting a pellet
+            dots_copy.remove(new_pos)
+            grid_copy[new_pos[0]][new_pos[1]] = 0
+            pellets_collected += 1
+        else:
+            reward = -3000  # Time penalty
+
+
+        current_pos = new_pos
+        score += reward
+
         screen.fill(BLACK)
-        draw_grid()
-        draw_pacman()
-        draw_ghost()
+        draw_grid(grid_copy)
+        draw_pacman(current_pos)
+        display_score(screen, score, pellets_collected, total_pellets)
         pygame.display.flip()
-        
-        if reward == GHOST_PENALTY or not np.any(grid == 2):
-            print("Game Over!")
-            pygame.time.wait(1000)  # Wait for 1 second before resetting
-            reset_game()
-        
-        clock.tick(10)  # Adjust for speed
 
-# Run the gameplay demonstration
-play_game()
+        clock.tick(5)
 
-pygame.quit()
+    print(f"Game over! Score: {score}, Pellets collected: {pellets_collected}/{total_pellets}")
+    pygame.quit()
+
+if __name__ == "__main__":
+    main()
